@@ -1,2 +1,3 @@
 # dolte
-Vite &amp; Svelte powered static site generator.
+
+static site generator for the rest of us

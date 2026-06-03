@@ -1,0 +1,35 @@
+{
+  "name": "dolte",
+  "description": "Vite & Svelte powered static site generator.",
+  "version": "0.0.1",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "dev": "bun run build && bun ./dist/cli.mjs docs",
+    "build": "obuild"
+  },
+  "exports": {
+    "default": "./dist/index.mjs",
+    "types": "./dist/index.d.mts"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "@types/express": "^5.0.6",
+    "@unocss/reset": "^66.7.0",
+    "citty": "^0.2.2",
+    "express": "^5.2.1",
+    "obuild": "^0.4.36",
+    "rollup-plugin-svelte": "^7.2.3"
+  },
+  "dependencies": {
+    "@sveltejs/vite-plugin-svelte": "^7.1.2",
+    "svelte": "^5.56.0",
+    "typescript": "^5",
+    "vite": "^8.0.16"
+  },
+  "keywords": [
+    "vite",
+    "svelte",
+    "dolte"
+  ]
+}
