@@ -14,6 +14,7 @@
         "@types/node": "^24",
         "@unocss/reset": "^66.7.0",
         "c12": "^4.0.0-beta.5",
+        "chokidar": "^5.0.0",
         "citty": "^0.2.2",
         "defu": "^6.1.7",
         "eslint": "^10.2.0",
