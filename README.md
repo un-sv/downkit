@@ -1,3 +1,3 @@
 # dolte
 
-static site generator for the rest of us
+turn markdown to routes

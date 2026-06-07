@@ -2,10 +2,9 @@ import { resolve } from 'path';
 import { defu } from 'defu';
 import type { Plugin } from 'vite';
 import { watch } from 'chokidar';
-import { writeFile, mkdir, readFile, readdir, rm } from 'fs/promises';
+import fs, { rmdir } from 'fs/promises';
 import { compile } from 'mdsvex';
-import { existsSync, rmdirSync, symlinkSync } from 'fs';
-import { createContext } from 'svelte';
+import { existsSync } from 'fs';
 
 export interface DolteConfig {
 	title?: string;
@@ -16,9 +15,14 @@ export interface DolteConfig {
 	base?: string;
 	rewrites?: Record<string, string>;
 	docs_dirname?: string;
+	sidebar?: Record<string, Record<string, string | Record<string, string>>>;
+	plugins?: Plugin[];
 }
 
-export function dolte(cfg: DolteConfig = {}): Plugin[] {
+export async function dolte(cfg: DolteConfig = {}) {
+	// avoid running during
+	if (process.argv[1].endsWith('.bin/svelte-kit') && process.argv[2] === 'sync') return [];
+
 	const config = defu(cfg, <DolteConfig>{
 		docs_dirname: 'docs',
 		title_template: ':title'
@@ -26,66 +30,86 @@ export function dolte(cfg: DolteConfig = {}): Plugin[] {
 	const DOCS_DIR = resolve('./src', config.docs_dirname!);
 	const ROUTES_DIR = resolve('./src/routes');
 
-	if (existsSync(ROUTES_DIR)) rmdirSync(ROUTES_DIR, { recursive: true });
+	if (existsSync(ROUTES_DIR)) await rmdir(ROUTES_DIR, { recursive: true });
 
 	// const routes_types = resolve(process.cwd(), '.svelte-kit/types/src/routes');
 	// const dolte_routes = resolve(routes_types, DOCS_DIR, '.dolte/routes');
 	// if (existsSync(routes_types)) symlinkSync(routes_types, dolte_routes);
 
 	watch('.', { cwd: DOCS_DIR }).on('all', async (event, path) => {
+		if (event.includes('Dir')) return;
+
 		const md = resolve(DOCS_DIR, path);
 		const page = path.replace(/(\.md|\/index\.md|index\.md)$/, '/+page.svelte');
 		const page_dir = resolve(ROUTES_DIR, page.split('/').slice(0, -1).join('/'));
 		const page_fullpath = resolve(`${ROUTES_DIR}/${page}`);
 
 		if (event === 'unlink') {
-			const files = await readdir(page_dir);
-			if (files.length === 1 && files[0] === '+page.svelte')
-				await rm(page_dir, { recursive: true, force: true });
-			else if (existsSync(page_fullpath)) await rm(page_fullpath);
+			if (!path.endsWith('.md')) return fs.rm(page_fullpath);
+
+			const files = await fs.readdir(page_dir);
+
+			if (files.length === 1 && files[0] === '+page.svelte') {
+				fs.rm(page_dir, { recursive: true, force: true });
+			} else if (existsSync(page_fullpath)) {
+				fs.rm(page_fullpath);
+			}
+
 			return;
 		}
 
-		if (!path.endsWith(`.md`)) return;
-		mkdir(page_dir, { recursive: true });
+		if (!path.endsWith('.md')) {
+			fs.mkdir(page_dir, { recursive: true });
+			fs.writeFile(page_fullpath, String(await fs.readFile(md)));
 
-		const result = await compile(String(await readFile(md)));
+			return;
+		}
+
+		fs.mkdir(page_dir, { recursive: true });
+
+		const result = await compile(String(await fs.readFile(md)), {});
 		if (!result) return;
 
-		if (result.code.startsWith('<script context="module">')) {
+		// REMOVE MODULE SCRIPT
+		if (result.code.indexOf('<script context="module">') > -1) {
 			const index = result.code.indexOf('</script>\n');
 			result.code = result.code.slice(index + 10);
 		}
 
-		const head_index = result.code.indexOf('<svelte:head>');
+		// HEAD STUFF
 		const head: string[] = [];
 		const frontmatter: Record<string, string> = (result.data?.fm as Record<string, string>) || {};
-		const title = frontmatter.title || config.title || '';
+		const title = frontmatter.title || config.title;
 		const title_template = frontmatter.title_template || config.title_template || ':title';
-		head.push(`<title>${title_template.replace(':title', title)}</title>`);
+		head.push(`<title>${title_template.replace(':title', title || '')}</title>`);
 
-		console.log(head_index);
+		const description = frontmatter.description || config.description;
+		if (description) head.push(`<meta name="description" content="${description}">`);
+
+		const head_index = result.code.indexOf('<svelte:head>');
 		if (head_index < 0) {
-			result.code += `
-         <svelte:head>
-         ${head.join('\n')}
-         </svelte:head`;
+			result.code += `\n<svelte:head>\n${head.join('\n')}\n</svelte:head>`;
 		} else {
-			result.code = `${result.code.slice(0, head_index + 13)}
-        ${head.join('\n')}
-			${result.code.slice(0, head_index + 13)}`;
+			result.code = `${result.code.slice(0, head_index + 13)}\n${head.join('\n')}\n${result.code.slice(0, head_index + 13)}`;
 		}
 
-		console.log(result.code);
+		// SCRIPT STUFF
+		const script_lines: string[] = ['import { dolte_page } from "dolte/context";'];
 
-		writeFile(page_fullpath, result.code);
+		script_lines.push(
+			`dolte_page.current = ${JSON.stringify({ title, description, frontmatter })}`
+		);
+
+		const closing_script_index = result.code.lastIndexOf('</script>');
+		if (closing_script_index > -1) {
+			result.code = `${result.code.slice(0, closing_script_index)}${script_lines.join('\n')}${result.code.slice(closing_script_index)}`;
+		} else if (script_lines) {
+			result.code = `<script lang="ts">\n${script_lines.join('\n')}\n</script>${result.code}`;
+		}
+
+		// WRITE ROUTE `+page.svelte` FILE
+		fs.writeFile(page_fullpath, result.code);
 	});
 
-	return [];
+	return config.plugins || [];
 }
-
-export interface DoltePage {
-	head: DolteConfig['head'];
-}
-
-export const [getDoltePage, setDoltePage] = createContext<DoltePage>();

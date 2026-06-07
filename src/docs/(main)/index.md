@@ -1,5 +1,6 @@
 ---
 title: Dolte
+description: Example
 ---
 
 hello world what
@@ -14,3 +15,6 @@ let i = $state('')
 
 [about](/about)
 [guides](/guides)
+
+
+what
