@@ -2,11 +2,11 @@ import { resolve } from 'path';
 import { defu } from 'defu';
 import type { Plugin } from 'vite';
 import { watch } from 'chokidar';
-import fs, { rmdir } from 'fs/promises';
+import fs from 'fs/promises';
 import { compile } from 'mdsvex';
 import { existsSync } from 'fs';
 
-export interface DolteConfig {
+export interface DownKitConfig {
 	title?: string;
 	title_template?: string;
 	description?: string;
@@ -19,21 +19,21 @@ export interface DolteConfig {
 	plugins?: Plugin[];
 }
 
-export async function dolte(cfg: DolteConfig = {}) {
+export async function downkit(cfg: DownKitConfig = {}) {
 	// avoid running during
 	if (process.argv[1].endsWith('.bin/svelte-kit') && process.argv[2] === 'sync') return [];
 
-	const config = defu(cfg, <DolteConfig>{
+	const config = defu(cfg, <DownKitConfig>{
 		docs_dirname: 'docs',
 		title_template: ':title'
 	});
 	const DOCS_DIR = resolve('./src', config.docs_dirname!);
 	const ROUTES_DIR = resolve('./src/routes');
 
-	if (existsSync(ROUTES_DIR)) await rmdir(ROUTES_DIR, { recursive: true });
+	if (existsSync(ROUTES_DIR)) await fs.rm(ROUTES_DIR, { recursive: true });
 
 	// const routes_types = resolve(process.cwd(), '.svelte-kit/types/src/routes');
-	// const dolte_routes = resolve(routes_types, DOCS_DIR, '.dolte/routes');
+	// const downkit_routes = resolve(routes_types, DOCS_DIR, '.dolte/routes');
 	// if (existsSync(routes_types)) symlinkSync(routes_types, dolte_routes);
 
 	watch('.', { cwd: DOCS_DIR }).on('all', async (event, path) => {
@@ -94,10 +94,10 @@ export async function dolte(cfg: DolteConfig = {}) {
 		}
 
 		// SCRIPT STUFF
-		const script_lines: string[] = ['import { dolte_page } from "dolte/context";'];
+		const script_lines: string[] = ['import { downkit_page } from "downkit/context";'];
 
 		script_lines.push(
-			`dolte_page.current = ${JSON.stringify({ title, description, frontmatter })}`
+			`downkit_page.current = ${JSON.stringify({ title, description, frontmatter })}`
 		);
 
 		const closing_script_index = result.code.lastIndexOf('</script>');

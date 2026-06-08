@@ -4,10 +4,8 @@
 	"description": "turn markdown to routes",
 	"license": "MIT",
 	"author": "Boe Reh",
-	"repository": {
-		"type": "git",
-		"url": "https://github.com/un-sv/downkit"
-	},
+	"repository": "un-sv/downkit",
+	"homepage": "https://downkit.unsv.dev",
 	"scripts": {
 		"dev": "vite dev",
 		"build": "npm run prepack && vite build",
@@ -105,13 +103,18 @@
 		"vite": "^8.0.7"
 	},
 	"keywords": [
-		"svelte"
+		"svelte",
+		"markdown"
 	],
 	"workspaces": [
 		"*"
 	],
 	"dependencies": {
+		"@iconify-json/lucide": "^1.2.111",
+		"@iconify-json/simple-icons": "^1.2.85",
 		"runed": "^0.37.1",
+		"tailwind-merge": "^3.6.0",
+		"tailwind-variants": "^3.2.2",
 		"uisv": "^0.0.23"
 	}
 }
