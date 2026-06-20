@@ -1,10 +1,12 @@
 import { resolve } from 'path';
 import { defu } from 'defu';
-import type { Plugin } from 'vite';
+import type { Plugin as VitePlugin } from 'vite';
 import { watch } from 'chokidar';
 import fs from 'fs/promises';
 import { compile } from 'mdsvex';
 import { existsSync } from 'fs';
+import { type Plugin as UnifiedPlugin } from 'unified';
+import type { Literal, Parent } from 'unist';
 
 export interface DownKitConfig {
 	title?: string;
@@ -16,16 +18,14 @@ export interface DownKitConfig {
 	rewrites?: Record<string, string>;
 	docs_dirname?: string;
 	sidebar?: Record<string, Record<string, string | Record<string, string>>>;
-	plugins?: Plugin[];
+	plugins?: VitePlugin[];
 }
 
-export async function downkit(cfg: DownKitConfig = {}) {
-	// avoid running during
-	if (process.argv[1].endsWith('.bin/svelte-kit') && process.argv[2] === 'sync') return [];
-
+export async function downkit(cfg: DownKitConfig = {}): Promise<VitePlugin[]> {
 	const config = defu(cfg, <DownKitConfig>{
 		docs_dirname: 'docs',
-		title_template: ':title'
+		title_template: ':title',
+		plugins: []
 	});
 	const DOCS_DIR = resolve('./src', config.docs_dirname!);
 	const ROUTES_DIR = resolve('./src/routes');
@@ -36,7 +36,7 @@ export async function downkit(cfg: DownKitConfig = {}) {
 	// const downkit_routes = resolve(routes_types, DOCS_DIR, '.dolte/routes');
 	// if (existsSync(routes_types)) symlinkSync(routes_types, dolte_routes);
 
-	watch('.', { cwd: DOCS_DIR }).on('all', async (event, path) => {
+	const watcher = watch('.', { cwd: DOCS_DIR }).on('all', async (event, path) => {
 		if (event.includes('Dir')) return;
 
 		const md = resolve(DOCS_DIR, path);
@@ -67,7 +67,17 @@ export async function downkit(cfg: DownKitConfig = {}) {
 
 		fs.mkdir(page_dir, { recursive: true });
 
-		const result = await compile(String(await fs.readFile(md)), {});
+		const result = await compile(String(await fs.readFile(md)), {
+			extensions: ['.md'],
+			remarkPlugins: [
+				function (): ReturnType<UnifiedPlugin> {
+					// @ts-expect-error will have stuff
+					return (node: Literal & Parent) => {
+						console.log(JSON.stringify(node, null, 2));
+					};
+				}
+			]
+		});
 		if (!result) return;
 
 		// REMOVE MODULE SCRIPT
@@ -111,5 +121,16 @@ export async function downkit(cfg: DownKitConfig = {}) {
 		fs.writeFile(page_fullpath, result.code);
 	});
 
-	return config.plugins || [];
+	// stop when it's sveltekit sync
+	if (process.argv[1].endsWith('.bin/svelte-kit') && process.argv[2] === 'sync') watcher.close();
+
+	return [
+		...config.plugins!,
+		{
+			name: 'vite-plugin-downkit',
+			buildStart() {
+				watcher.close();
+			}
+		}
+	];
 }

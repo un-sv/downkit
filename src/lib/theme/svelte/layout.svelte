@@ -1,15 +1,23 @@
 <script module lang="ts">
 	import type { Component, Snippet } from 'svelte';
-	import type { ClassValue, SvelteHTMLElements } from 'svelte/elements';
+	import type { ClassValue } from 'svelte/elements';
 	// import { dolte_page } from '$lib/context.svelte.js';
-	import { downkit_page } from 'downkit/context';
-	import { Icon, App, type ButtonProps } from 'uisv';
+	import { App, Icon, isSnippet, Button, type ButtonProps } from 'uisv';
 	import { page } from '$app/state';
 	import { cn } from 'tailwind-variants';
-	import { setMode, mode } from 'uisv/mode';
+	import { setMode, mode, userPrefersMode, systemPrefersMode, toggleMode } from 'uisv/mode';
+	import defu from 'defu';
+
+	export type NavigationItem = {
+		label: string;
+		href?: string;
+		target?: string;
+		collapsed?: boolean;
+		children?: NavigationItem[];
+	};
 
 	export type LayoutProps = {
-		sidebar?: Record<string, Record<string, string>>;
+		sidebar?: NavigationItem[] | Record<string, NavigationItem[]>;
 		navbar?: {
 			links?: Record<string, string | Record<string, string>>;
 			logo?: Component | Snippet;
@@ -39,9 +47,7 @@
 </script>
 
 <script lang="ts">
-	import { Button } from 'uisv';
-
-	let { sidebar, navbar, children, toc, ui = {} }: LayoutProps = $props();
+	let { sidebar, navbar, children, toc, frontmatter, ui = {} }: LayoutProps = $props();
 </script>
 
 <App>
@@ -52,14 +58,20 @@
 				ui.navbar
 			)}
 		>
+			{#if isSnippet(navbar.logo)}
+				{@render navbar.logo()}
+			{:else}
+				<Icon name={navbar.logo} />
+			{/if}
+
 			{#each Object.entries(navbar?.links || []) as [label, item], idx (idx)}
 				{#if typeof item === 'string'}
 					<a
 						href={item}
 						class={cn(
-							'h-15 inline-flex items-center justify-center px-2 border-b transition duration-500',
+							'h-15 inline-flex items-center justify-center px-2 border-b transition',
 							page.url.pathname === item
-								? 'border-primary'
+								? 'border-primary text-primary'
 								: 'border-transparent hover:border-surface/25',
 							ui.link
 						)}
@@ -95,14 +107,28 @@
 					/>
 				{:else if 'dark_icon' in btn}
 					<Button
-						{...btn}
-						variant="outline"
-						color="surface"
-						icon={{
-							dark: btn.dark_icon,
-							light: btn.light_icon,
-							system: btn.system_icon
-						}[mode.current || 'system']}
+						{...defu(btn, <ButtonProps>{
+							variant: 'outline',
+							color: 'surface',
+							icon: {
+								dark: btn.dark_icon,
+								light: btn.light_icon,
+								system: btn.system_icon
+							}[mode.current || 'system'],
+							onclick() {
+								console.log(userPrefersMode.current, mode.current, systemPrefersMode.current);
+								if (mode.current === systemPrefersMode.current) toggleMode();
+								else setMode('system');
+							},
+							ui: {
+								base: [
+									'shadow-md border-0 inset-shadow-xs inset-shadow-white/10 transition-all',
+									'hover:shadow hover:bg-initial hover:inset-shadow-white/1',
+									'active:shadow-none active:inset-shadow-sm active:inset-shadow-black/25'
+								],
+								icon: 'size-5'
+							}
+						})}
 					/>
 				{/if}
 			{/each}
