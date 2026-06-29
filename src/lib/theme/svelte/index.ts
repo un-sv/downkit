@@ -7,7 +7,7 @@ export function plugins(options: { uisv?: PluginOptions } = {}) {
 			fonts: {
 				fonts: {
 					sans: { name: 'Fira Sans', weights: [400] },
-					dm: { name: 'DM Serif Display', weights: [400, 500], italic: true }
+					serif: { name: 'DM Serif Display', weights: [400, 500], italic: true }
 				}
 			},
 			colors: {

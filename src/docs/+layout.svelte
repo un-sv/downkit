@@ -1,6 +1,5 @@
 <script lang="ts">
 	import Layout, { type LayoutProps } from '$lib/theme/svelte/layout.svelte';
-	import 'virtual:uno.css';
 	import { downkit_page } from 'downkit/context';
 
 	const navbar: LayoutProps['navbar'] = {
@@ -11,7 +10,7 @@
 				href: 'https://github.com/un-sv/downkit'
 			}
 		],
-		links: { Guides: '/guides/introduction', Themes: '/themes', Reference: '/reference' },
+		links: { Guides: '/guides/getting-started', Themes: '/themes', Reference: '/reference' },
 		toggles: [
 			{
 				dark_icon: 'i-lucide:moon',

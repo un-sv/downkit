@@ -6,7 +6,6 @@ import fs from 'fs/promises';
 import { compile } from 'mdsvex';
 import { existsSync } from 'fs';
 import { type Plugin as UnifiedPlugin } from 'unified';
-import type { Literal, Parent } from 'unist';
 
 export interface DownKitConfig {
 	title?: string;
@@ -35,6 +34,7 @@ export async function downkit(cfg: DownKitConfig = {}): Promise<VitePlugin[]> {
 	// const routes_types = resolve(process.cwd(), '.svelte-kit/types/src/routes');
 	// const downkit_routes = resolve(routes_types, DOCS_DIR, '.dolte/routes');
 	// if (existsSync(routes_types)) symlinkSync(routes_types, dolte_routes);
+	//
 
 	const watcher = watch('.', { cwd: DOCS_DIR }).on('all', async (event, path) => {
 		if (event.includes('Dir')) return;
@@ -67,13 +67,20 @@ export async function downkit(cfg: DownKitConfig = {}): Promise<VitePlugin[]> {
 
 		fs.mkdir(page_dir, { recursive: true });
 
-		const result = await compile(String(await fs.readFile(md)), {
+		const source_code = String(await fs.readFile(md));
+
+		const result = await compile(source_code, {
 			extensions: ['.md'],
 			remarkPlugins: [
 				function (): ReturnType<UnifiedPlugin> {
-					// @ts-expect-error will have stuff
-					return (node: Literal & Parent) => {
-						console.log(JSON.stringify(node, null, 2));
+					return (node) => {
+						if (!('children' in node && Array.isArray(node.children))) return;
+
+						for (const child of node.children) {
+							if (child.type !== 'heading') continue;
+
+							console.log(JSON.stringify(child.children[0].value, null, 2));
+						}
 					};
 				}
 			]
@@ -124,13 +131,7 @@ export async function downkit(cfg: DownKitConfig = {}): Promise<VitePlugin[]> {
 	// stop when it's sveltekit sync
 	if (process.argv[1].endsWith('.bin/svelte-kit') && process.argv[2] === 'sync') watcher.close();
 
-	return [
-		...config.plugins!,
-		{
-			name: 'vite-plugin-downkit',
-			buildStart() {
-				watcher.close();
-			}
-		}
-	];
+	if (process.argv[1] === 'vite' && process.argv[2] === 'build') watcher.close();
+
+	return config.plugins || [];
 }

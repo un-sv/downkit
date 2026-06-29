@@ -9,7 +9,11 @@ hello world what
 let i = $state('')
 </script>
 
-<input bind:value={i} />
+
+
+<h1>
+    whay
+</h1>
 
 {i}
 

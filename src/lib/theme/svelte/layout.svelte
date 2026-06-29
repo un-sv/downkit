@@ -1,12 +1,14 @@
 <script module lang="ts">
 	import type { Component, Snippet } from 'svelte';
 	import type { ClassValue } from 'svelte/elements';
-	// import { dolte_page } from '$lib/context.svelte.js';
+	import { downkit_page } from '$lib/context.svelte.js';
 	import { App, Icon, isSnippet, Button, type ButtonProps } from 'uisv';
 	import { page } from '$app/state';
 	import { cn } from 'tailwind-variants';
 	import { setMode, mode, userPrefersMode, systemPrefersMode, toggleMode } from 'uisv/mode';
 	import defu from 'defu';
+	import 'virtual:uno.css';
+	import './layout.css';
 
 	export type NavigationItem = {
 		label: string;
@@ -47,8 +49,12 @@
 </script>
 
 <script lang="ts">
-	let { sidebar, navbar, children, toc, frontmatter, ui = {} }: LayoutProps = $props();
+	let { sidebar, navbar, children, toc, ui = {} }: LayoutProps = $props();
 </script>
+
+<svelte:head>
+	<title>{downkit_page.current.title}</title>
+</svelte:head>
 
 <App>
 	{#if navbar}
@@ -151,13 +157,3 @@
 
 	<footer></footer>
 </App>
-
-<style>
-	:global {
-		h1 {
-			text-wrap: balance;
-			color: var(--sk-fg-1);
-			position: relative;
-		}
-	}
-</style>

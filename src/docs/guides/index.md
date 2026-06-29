@@ -1,3 +1,0 @@
-
-[home](/)
-[introduction](/guides/introduction)
