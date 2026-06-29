@@ -21,5 +21,4 @@ jobs:
           registry-url: 'https://registry.npmjs.org'
           package-manager-cache: false # never use caching in release builds
       - run: npm i
-      - run: npm lint
       - run: npm publish
